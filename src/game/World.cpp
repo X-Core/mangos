@@ -61,6 +61,7 @@
 #include "WaypointManager.h"
 #include "GMTicketMgr.h"
 #include "Util.h"
+#include "AuctionHouseBot.h"
 
 INSTANTIATE_SINGLETON_1( World );
 
@@ -771,6 +772,10 @@ void World::LoadConfigSettings(bool reload)
     setConfig(CONFIG_UINT32_TIMERBAR_FIRE_GMLEVEL,    "TimerBar.Fire.GMLevel", SEC_CONSOLE);
     setConfig(CONFIG_UINT32_TIMERBAR_FIRE_MAX,        "TimerBar.Fire.Max", 1);
 
+    // External Mail
+    setConfig(CONFIG_UINT32_EXTERNAL_MAIL, "ExternalMail.Enabled", 0);
+    setConfig(CONFIG_UINT32_EXTERNAL_MAIL_INTERVAL, "ExternalMail.Interval", 600);
+
     m_VisibleUnitGreyDistance = sConfig.GetFloatDefault("Visibility.Distance.Grey.Unit", 1);
     if(m_VisibleUnitGreyDistance >  MAX_VISIBILITY_DISTANCE)
     {
@@ -873,6 +878,28 @@ void World::LoadConfigSettings(bool reload)
     sLog.outString( "WORLD: VMap support included. LineOfSight:%i, getHeight:%i",enableLOS, enableHeight);
     sLog.outString( "WORLD: VMap data directory is: %svmaps",m_dataPath.c_str());
     sLog.outString( "WORLD: VMap config keys are: vmap.enableLOS, vmap.enableHeight, vmap.ignoreMapIds, vmap.ignoreSpellIds");
+
+    /* AHBot Configuration Settings */
+    setConfig(CONFIG_BOOL_AHBOT_SELLER_ENABLED  , "AuctionHouseBot.Seller.Enabled"  , false);
+    setConfig(CONFIG_BOOL_AHBOT_BUYER_ENABLED   , "AuctionHouseBot.Buyer.Enabled"   , false);
+
+    setConfig(CONFIG_UINT32_AHBOT_ACCOUNT_ID    , "AuctionHouseBot.Account"         , 0);
+    setConfig(CONFIG_UINT32_AHBOT_CHARACTER_ID  , "AuctionHouseBot.Character"       , 0);
+
+    setConfig(CONFIG_BOOL_AHBOT_ITEMS_VENDOR    , "AuctionHouseBot.Items.Vendor"    , false);
+    setConfig(CONFIG_BOOL_AHBOT_ITEMS_LOOT      , "AuctionHouseBot.Items.Loot"      , true);
+    setConfig(CONFIG_BOOL_AHBOT_ITEMS_MISC      , "AuctionHouseBot.Items.Misc"      , false);
+
+    setConfig(CONFIG_BOOL_AHBOT_BIND_NO         , "AuctionHouseBot.Bind.No"         , true);
+    setConfig(CONFIG_BOOL_AHBOT_BIND_PICKUP     , "AuctionHouseBot.Bind.Pickup"     , false);
+    setConfig(CONFIG_BOOL_AHBOT_BIND_EQUIP      , "AuctionHouseBot.Bind.Equip"      , true);
+    setConfig(CONFIG_BOOL_AHBOT_BIND_USE        , "AuctionHouseBot.Bind.Use"        , true);
+    setConfig(CONFIG_BOOL_AHBOT_BIND_QUEST      , "AuctionHouseBot.Bind.Quest"      , false);
+
+    setConfig(CONFIG_BOOL_AHBOT_BUYPRICE_SELLER , "AuctionHouseBot.BuyPrice.Seller" , false);
+    setConfig(CONFIG_BOOL_AHBOT_BUYPRICE_BUYER  , "AuctionHouseBot.BuyPrice.Buyer"  , false);
+
+    setConfig(CONFIG_UINT32_AHBOT_ITEMS_CYCLE   , "AuctionHouseBot.ItemsPerCycle"   , 200);
 }
 
 /// Initialize the World
@@ -1268,6 +1295,11 @@ void World::SetInitialWorldSettings()
     m_timers[WUPDATE_CORPSES].SetInterval(3*HOUR*IN_MILLISECONDS);
     m_timers[WUPDATE_DELETECHARS].SetInterval(DAY*IN_MILLISECONDS); // check for chars to delete every day
     m_timers[WUPDATE_AUTOBROADCAST].SetInterval(abtimer);
+	m_timers[WUPDATE_DELETECHARS].SetInterval(DAY*IN_MILLISECONDS); // check for chars to delete every day
+
+    m_timers[WUPDATE_AUTOBROADCAST].SetInterval(abtimer);
+
+    m_timers[WUPDATE_EXT_MAIL].SetInterval(m_configUint32Values[CONFIG_UINT32_EXTERNAL_MAIL_INTERVAL] * MINUTE * IN_MILLISECONDS); 
 
     //to set mailtimer to return mails every day between 4 and 5 am
     //mailtimer is increased when updating auctions
@@ -1309,6 +1341,10 @@ void World::SetInitialWorldSettings()
     sLog.outString("Starting Game Event system..." );
     uint32 nextGameEvent = sGameEventMgr.Initialize();
     m_timers[WUPDATE_EVENTS].SetInterval(nextGameEvent);    //depend on next event
+    sLog.outString("Starting Autobroadcast system by Xeross..." );
+
+    sLog.outString("Initialize AuctionHouseBot...");
+    auctionbot.Initialize();
 
     // Delete all characters which have been deleted X days before
     Player::DeleteOldCharacters();
@@ -1395,6 +1431,7 @@ void World::Update(uint32 diff)
     /// <ul><li> Handle auctions when the timer has passed
     if (m_timers[WUPDATE_AUCTIONS].Passed())
     {
+        auctionbot.Update();
         m_timers[WUPDATE_AUCTIONS].Reset();
 
         ///- Update mails (return old mails with item, or delete them)
@@ -1493,6 +1530,13 @@ void World::Update(uint32 diff)
             m_timers[WUPDATE_AUTOBROADCAST].Reset();
             SendBroadcast();
         }
+    }
+
+    // External Mail
+    if(m_configUint32Values[CONFIG_UINT32_EXTERNAL_MAIL] != 0 && m_timers[WUPDATE_EXT_MAIL].Passed())
+    {
+        WorldSession::SendExternalMails();
+        m_timers[WUPDATE_EXT_MAIL].Reset();
     }
 
     /// </ul>

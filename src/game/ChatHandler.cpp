@@ -181,17 +181,29 @@ void WorldSession::HandleMessagechatOpcode( WorldPacket & recv_data )
 
             if(type == CHAT_MSG_SAY)
             {
+
                 sChatLog.ChatMsg(GetPlayer(), msg, type);
+
+                sLog.outChat(type, "[%s] says: %s", GetPlayer()->GetName(), msg.c_str());
+
                 GetPlayer()->Say(msg, lang);
             }
             else if(type == CHAT_MSG_EMOTE)
             {
+
                 sChatLog.ChatMsg(GetPlayer(), msg, type);
+
+                sLog.outChat(type, "[%s] %s", GetPlayer()->GetName(), msg.c_str());
+
                 GetPlayer()->TextEmote(msg);
             }
             else if(type == CHAT_MSG_YELL)
             {
+
                 sChatLog.ChatMsg(GetPlayer(), msg, type);
+
+                sLog.outChat(type, "[%s] yells: %s", GetPlayer()->GetName(), msg.c_str());
+
                 GetPlayer()->Yell(msg, lang);
             }
         } break;
@@ -236,6 +248,7 @@ void WorldSession::HandleMessagechatOpcode( WorldPacket & recv_data )
                 }
             }
 
+            sLog.outChat(type, "[%s] whispers to [%s]: %s", GetPlayer()->GetName(), to.c_str(), msg.c_str());
             GetPlayer()->Whisper(msg, lang, player->GetGUID());
         } break;
 
@@ -271,6 +284,11 @@ void WorldSession::HandleMessagechatOpcode( WorldPacket & recv_data )
             if((type == CHAT_MSG_PARTY_LEADER) && !group->IsLeader(_player->GetGUID()))
                 return;
 
+            if(type == CHAT_MSG_PARTY_LEADER)
+                sLog.outChat(type, "[%s][Party - Leader]: %s", GetPlayer()->GetName(), msg.c_str());
+            else
+                sLog.outChat(type, "[%s][%s's Party]: %s", GetPlayer()->GetName(), group->GetLeaderName(), msg.c_str());
+
             WorldPacket data;
             ChatHandler::FillMessageData(&data, this, type, lang, NULL, 0, msg.c_str(), NULL);
             group->BroadcastPacket(&data, false, group->GetMemberGroup(GetPlayer()->GetGUID()));
@@ -297,7 +315,10 @@ void WorldSession::HandleMessagechatOpcode( WorldPacket & recv_data )
 
             if (GetPlayer()->GetGuildId())
                 if (Guild *guild = sObjectMgr.GetGuildById(GetPlayer()->GetGuildId()))
+                {
                     guild->BroadcastToGuild(this, msg, lang == LANG_ADDON ? LANG_ADDON : LANG_UNIVERSAL);
+                    sLog.outChat(type, "[%s][Guild]<%s>: %s", GetPlayer()->GetName(), guild->GetName().c_str(), msg.c_str());
+                }
         } break;
 
         case CHAT_MSG_OFFICER:
@@ -321,7 +342,10 @@ void WorldSession::HandleMessagechatOpcode( WorldPacket & recv_data )
 
             if (GetPlayer()->GetGuildId())
                 if (Guild *guild = sObjectMgr.GetGuildById(GetPlayer()->GetGuildId()))
+                {
                     guild->BroadcastToOfficers(this, msg, lang == LANG_ADDON ? LANG_ADDON : LANG_UNIVERSAL);
+                    sLog.outChat(type, "[%s][Guild][Officer]<%s>: %s", GetPlayer()->GetName(), guild->GetName().c_str(), msg.c_str());
+                }
         } break;
 
         case CHAT_MSG_RAID:
@@ -351,6 +375,8 @@ void WorldSession::HandleMessagechatOpcode( WorldPacket & recv_data )
                 if(!group || group->isBGGroup() || !group->isRaidGroup())
                     return;
             }
+
+            sLog.outChat(type, "[%s][%s's Raid]: %s", GetPlayer()->GetName(), group->GetLeaderName(), msg.c_str());
 
             WorldPacket data;
             ChatHandler::FillMessageData(&data, this, CHAT_MSG_RAID, lang, "", 0, msg.c_str(), NULL);
@@ -384,6 +410,8 @@ void WorldSession::HandleMessagechatOpcode( WorldPacket & recv_data )
                     return;
             }
 
+            sLog.outChat(type, "[%s][Raid - Leader]: %s", GetPlayer()->GetName(), msg.c_str());
+
             WorldPacket data;
             ChatHandler::FillMessageData(&data, this, CHAT_MSG_RAID_LEADER, lang, "", 0, msg.c_str(), NULL);
             group->BroadcastPacket(&data, false);
@@ -405,6 +433,8 @@ void WorldSession::HandleMessagechatOpcode( WorldPacket & recv_data )
             Group *group = GetPlayer()->GetGroup();
             if(!group || !group->isRaidGroup() || !(group->IsLeader(GetPlayer()->GetGUID()) || group->IsAssistant(GetPlayer()->GetGUID())))
                 return;
+
+            sLog.outChat(type, "[%s][%s's Raid]: %s", GetPlayer()->GetName(), group->GetLeaderName(), msg.c_str());
 
             WorldPacket data;
             //in battleground, raid warning is sent only to players in battleground - code is ok
@@ -430,6 +460,8 @@ void WorldSession::HandleMessagechatOpcode( WorldPacket & recv_data )
             if(!group || !group->isBGGroup())
                 return;
 
+            sLog.outChat(type, "[%s][%s's BG]: %s", GetPlayer()->GetName(), group->GetLeaderName(), msg.c_str());
+
             WorldPacket data;
             ChatHandler::FillMessageData(&data, this, CHAT_MSG_BATTLEGROUND, lang, "", 0, msg.c_str(), NULL);
             group->BroadcastPacket(&data, false);
@@ -453,6 +485,8 @@ void WorldSession::HandleMessagechatOpcode( WorldPacket & recv_data )
             if(!group || !group->isBGGroup() || !group->IsLeader(GetPlayer()->GetGUID()))
                 return;
 
+            sLog.outChat(type, "[%s][BG - Leader]: %s", GetPlayer()->GetName(), msg.c_str());
+
             WorldPacket data;
             ChatHandler::FillMessageData(&data, this, CHAT_MSG_BATTLEGROUND_LEADER, lang, "", 0, msg.c_str(), NULL);
             group->BroadcastPacket(&data, false);
@@ -474,7 +508,10 @@ void WorldSession::HandleMessagechatOpcode( WorldPacket & recv_data )
 
             if(ChannelMgr* cMgr = channelMgr(_player->GetTeam()))
                 if(Channel *chn = cMgr->GetChannel(channel, _player))
+                {
                     chn->Say(_player->GetGUID(), msg.c_str(), lang);
+                    sLog.outChat(type , "[%s][%s]: %s", GetPlayer()->GetName(), channel.c_str(), msg.c_str());
+                }
         } break;
 
         case CHAT_MSG_AFK:
