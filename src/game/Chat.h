@@ -405,8 +405,6 @@ class ChatHandler
         bool HandleReloadSpellPetAurasCommand(const char* args);
         bool HandleReloadSpellDisabledCommand(const char* args);
 
-        bool HandleReloadSpellDisabledCommand(const char* args);
-
         bool HandleReloadVehicleDataCommand(const char* args);
         bool HandleReloadVehicleSeatDataCommand(const char* args);
 

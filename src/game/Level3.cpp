@@ -1390,14 +1390,6 @@ bool ChatHandler::HandleReloadVehicleSeatDataCommand(const char*)
     return true;
 }
 
-bool ChatHandler::HandleReloadSpellDisabledCommand(const char* /*arg*/)
-{
-    sLog.outString( "Re-Loading spell disabled table...");
-    sObjectMgr.LoadSpellDisabledEntrys();
-    SendGlobalSysMessage("DB table `spell_disabled` reloaded.");
-    return true;
-}
-
 bool ChatHandler::HandleLoadScriptsCommand(const char* args)
 {
     if(!LoadScriptingModule(args)) return true;
