@@ -354,6 +354,8 @@ class Spell
         void EffectTeachTaxiNode(SpellEffectIndex eff_idx);
         void EffectTitanGrip(SpellEffectIndex eff_idx);
         void EffectEnchantItemPrismatic(SpellEffectIndex eff_idx);
+        void EffectSummonVehicle(SpellEffectIndex eff_idx);
+        void EffectDamageBuilding(SpellEffectIndex eff_idx);
         void EffectPlayMusic(SpellEffectIndex eff_idx);
         void EffectSpecCount(SpellEffectIndex eff_idx);
         void EffectActivateSpec(SpellEffectIndex eff_idx);
@@ -372,6 +374,8 @@ class Spell
 
         SpellCastResult CheckCast(bool strict);
         SpellCastResult CheckPetCast(Unit* target);
+        bool IsValidSingleTargetEffect(Unit const* target, Targets type) const;
+        bool IsValidSingleTargetSpell(Unit const* target) const;
 
         // handlers
         void handle_immediate();
