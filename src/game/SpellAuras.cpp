@@ -2614,7 +2614,7 @@ void Aura::HandleAuraDummy(bool apply, bool Real)
                 return;
 
             int32 basepoints = GetSpellProto()->EffectBasePoints[1] * 8;
-            basepoints = caster->SpellDamageBonus(m_target, GetSpellProto(), basepoints, DOT);
+            basepoints = caster->SpellDamageBonusDone(m_target, GetSpellProto(), basepoints, DOT);
             m_target->CastCustomSpell(m_target, 64085, &basepoints, NULL, NULL, false);
             return;
         }

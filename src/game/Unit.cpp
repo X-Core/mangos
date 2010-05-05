@@ -6949,7 +6949,7 @@ bool Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura* triggeredByAu
                 //  firehit =  dummySpell->EffectBasePoints[0] / ((4*19.25) * 1.3);
                 float fire_onhit = dummySpell->EffectBasePoints[0] / 100.0;
 
-                float add_spellpower = SpellBaseDamageBonus(SPELL_SCHOOL_MASK_FIRE)
+                float add_spellpower = SpellBaseDamageBonusDone(SPELL_SCHOOL_MASK_FIRE)
                                      + SpellBaseDamageBonusForVictim(SPELL_SCHOOL_MASK_FIRE, pVictim);
 
                 // 1.3speed = 5%, 2.6speed = 10%, 4.0 speed = 15%, so, 1.0speed = 3.84%
@@ -9562,9 +9562,6 @@ uint32 Unit::SpellDamageBonusTaken(Unit *pCaster, SpellEntry const *spellProto, 
         else
             coeff = bonus->direct_damage * LvlPenalty;
 
-        if (bonus->ap_bonus)
-            DoneTotal += int32(bonus->ap_bonus * GetTotalAttackPowerValue(BASE_ATTACK) * stack);
-
         // Spellmod SpellBonusDamage
         if (modOwner)
         {
@@ -9572,8 +9569,6 @@ uint32 Unit::SpellDamageBonusTaken(Unit *pCaster, SpellEntry const *spellProto, 
             modOwner->ApplySpellMod(spellProto->Id,SPELLMOD_SPELL_BONUS_DAMAGE,coeff);
             coeff /= 100.0f;
         }
-
-        DoneTotal  += int32(DoneAdvertisedBenefit * coeff);
 
         TakenTotal += int32(TakenAdvertisedBenefit * coeff);
     }
@@ -9671,6 +9666,31 @@ int32 Unit::SpellBaseDamageBonusTaken(SpellSchoolMask schoolMask)
 
     // ..taken
     AuraList const& mDamageTaken = GetAurasByType(SPELL_AURA_MOD_DAMAGE_TAKEN);
+    for(AuraList::const_iterator i = mDamageTaken.begin();i != mDamageTaken.end(); ++i)
+    {
+        if(((*i)->GetModifier()->m_miscvalue & schoolMask) != 0)
+            TakenAdvertisedBenefit += (*i)->GetModifier()->m_amount;
+    }
+
+    return TakenAdvertisedBenefit > 0 ? TakenAdvertisedBenefit : 0;
+}
+
+
+int32 Unit::SpellBaseDamageBonusForVictim(SpellSchoolMask schoolMask, Unit *pVictim)
+{
+    uint32 creatureTypeMask = pVictim->GetCreatureTypeMask();
+
+    int32 TakenAdvertisedBenefit = 0;
+    // ..done (for creature type by mask) in taken
+    AuraList const& mDamageDoneCreature = GetAurasByType(SPELL_AURA_MOD_DAMAGE_DONE_CREATURE);
+    for(AuraList::const_iterator i = mDamageDoneCreature.begin();i != mDamageDoneCreature.end(); ++i)
+    {
+        if(creatureTypeMask & uint32((*i)->GetModifier()->m_miscvalue))
+            TakenAdvertisedBenefit += (*i)->GetModifier()->m_amount;
+    }
+
+    // ..taken
+    AuraList const& mDamageTaken = pVictim->GetAurasByType(SPELL_AURA_MOD_DAMAGE_TAKEN);
     for(AuraList::const_iterator i = mDamageTaken.begin();i != mDamageTaken.end(); ++i)
     {
         if(((*i)->GetModifier()->m_miscvalue & schoolMask) != 0)
@@ -10061,7 +10081,7 @@ uint32 Unit::SpellHealingBonusDone(Unit *pVictim, SpellEntry const *spellProto, 
             coeff /= 100.0f;
         }
 
-        DoneTotal  += int32(DoneAdvertisedBenefit * coeff * SpellModSpellDamage);
+        //DoneTotal  += int32(DoneAdvertisedBenefit * coeff * SpellModSpellDamage);
     }
     // Default calculation
     else if (DoneAdvertisedBenefit)
@@ -10100,7 +10120,7 @@ uint32 Unit::SpellHealingBonusDone(Unit *pVictim, SpellEntry const *spellProto, 
             coeff /= 100.0f;
         }
 
-        DoneTotal  += int32(DoneAdvertisedBenefit * (CastingTime / 3500.0f) * DotFactor * LvlPenalty * SpellModSpellDamage * 1.88f);
+        //DoneTotal  += int32(DoneAdvertisedBenefit * (CastingTime / 3500.0f) * DotFactor * LvlPenalty * SpellModSpellDamage * 1.88f);
     }
 
     // use float as more appropriate for negative values and percent applying
